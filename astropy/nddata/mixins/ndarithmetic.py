@@ -262,7 +262,7 @@ class NDArithmeticMixin:
         # collapse operations on masked quantities/arrays which are supported by
         # the astropy.utils.masked or np.ma modules should use those modules to
         # do the arithmetic on the data and propagate masks.
-        use_masked_arith = operand is None and self.mask is not None
+        use_masked_arith = (self.mask is not None or (operand is not None and operand.mask is not None))
         if use_masked_arith:
             # if we're *including* masked values in the operation,
             # use the astropy Masked module:
@@ -321,16 +321,21 @@ class NDArithmeticMixin:
             )
 
         if handle_mask is None:
-            pass
+            # If handle_mask is None, propagate the mask if one operand has a mask.
+            if self.mask is not None:
+                kwargs["mask"] = deepcopy(self.mask)
+            elif operand is not None and operand.mask is not None:
+                kwargs["mask"] = deepcopy(operand.mask)
+            else:
+                kwargs["mask"] = None
         elif hasattr(result, "mask"):
             # if numpy.ma or astropy.utils.masked is being used, the constructor
             # will pick up the mask from the masked object:
             kwargs["mask"] = None
         elif handle_mask in ["ff", "first_found"]:
-            if self.mask is None:
-                kwargs["mask"] = deepcopy(operand.mask)
-            else:
-                kwargs["mask"] = deepcopy(self.mask)
+            # If self.mask is None, check and propagate operand.mask if it is not None.
+            # If self.mask is not None, propagate it using deepcopy.
+            kwargs["mask"] = deepcopy(self.mask if self.mask is not None else operand.mask)
         else:
             kwargs["mask"] = self._arithmetic_mask(
                 operation, operand, handle_mask, axis=axis, **kwds2["mask"]
