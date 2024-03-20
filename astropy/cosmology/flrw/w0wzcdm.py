@@ -202,7 +202,7 @@ class w0wzCDM(FLRW):
         """
         z = aszarr(z)
         zp1 = z + 1.0  # (converts z [unit] -> z [dimensionless])
-        return zp1 ** (3.0 * (1.0 + self._w0 - self._wz)) * exp(-3.0 * self._wz * z)
+        return zp1 ** (3.0 * (1.0 + self._w0 - self._wz)) * exp(3.0 * self._wz * z)
 
 
 class Flatw0wzCDM(FlatFLRWMixin, w0wzCDM):
