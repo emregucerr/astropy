@@ -3,6 +3,7 @@
 from astropy.cosmology import units as cu
 from astropy.io import registry as io_registry
 from astropy.units import add_enabled_units
+from .io.latex import write_latex
 
 __all__ = [
     "CosmologyRead",
@@ -120,6 +121,7 @@ class CosmologyWrite(io_registry.UnifiedReadWrite):
     """
 
     def __init__(self, instance, cls):
+        readwrite_registry.register_writer('latex', write_latex)
         super().__init__(instance, cls, "write", registry=readwrite_registry)
 
     def __call__(self, *args, **kwargs):

@@ -775,6 +775,29 @@ class FLRW(Cosmology):
             + self._Ode0 * self.de_density_scale(z)
         )
 
+    def write(self, format, *args, **kwargs):
+        """Write this Cosmology to a file, serialized in the given format.
+
+        Parameters
+        ----------
+        format : str
+            The format in which to serialize the Cosmology. Example: 'latex'.
+        *args
+            Positional arguments passed through to data writer. If supplied the
+            first argument is the output filename.
+        **kwargs
+            Keyword arguments passed through to data writer.
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        """
+        from astropy.cosmology.connect import readwrite_registry
+        readwrite_registry.write(self, format, *args, **kwargs)
+
     def inv_efunc(self, z):
         """Inverse of ``efunc``.
 
