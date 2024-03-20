@@ -5,7 +5,7 @@
 import pickle
 
 import numpy as np
-import pytest
+from pytest import raises, mark
 
 from astropy import constants
 from astropy import units as u
@@ -14,6 +14,9 @@ from astropy.coordinates.earth import ELLIPSOIDS, EarthLocation
 from astropy.coordinates.name_resolve import NameResolveError
 from astropy.time import Time
 from astropy.units import allclose as quantity_allclose
+from astropy.coordinates import EarthLocation
+from astropy.time import Time
+from numpy.testing import assert_allclose
 
 
 def allclose_m14(a, b, rtol=1.0e-14, atol=None):
@@ -406,6 +409,34 @@ def test_gravitational_redshift():
         someloc.gravitational_redshift(sometime, masses=masses)
 
 
+def test_get_itrs_topocentric_with_location():
+    # Define actual numeric values with appropriate units for geocentric coordinates
+    geocentric_x1 = 0 * u.m
+    geocentric_y1 = 0 * u.m
+    geocentric_z1 = 6378137 * u.m
+    geocentric_x2 = 1000 * u.m
+    geocentric_y2 = 2000 * u.m
+    geocentric_z2 = 6379137 * u.m
+
+    # Create EarthLocation objects for the reference and observing locations
+    reference_location = EarthLocation(geocentric_x1, geocentric_y1, geocentric_z1)
+    observing_location = EarthLocation(geocentric_x2, geocentric_y2, geocentric_z2)
+
+    # Get the ITRS coordinates at a specific time for the observing location
+    # with respect to the reference location
+    obstime = Time('2022-01-01T00:00:00')
+    itrs_observing = observing_location.get_itrs(obstime=obstime, location=reference_location)
+
+    # Calculate the expected topocentric coordinates by subtracting the reference location
+    expected_x = geocentric_x2 - geocentric_x1
+    expected_y = geocentric_y2 - geocentric_y1
+    expected_z = geocentric_z2 - geocentric_z1
+
+    # Assert that the returned ITRS coordinates match the expected topocentric coordinates
+    assert_allclose(itrs_observing.x.value, expected_x.value)
+    assert_allclose(itrs_observing.y.value, expected_y.value)
+    assert_allclose(itrs_observing.z.value, expected_z.value)
+
 def test_read_only_input():
     lon = np.array([80.0, 440.0]) * u.deg
     lat = np.array([45.0]) * u.deg
@@ -418,3 +449,33 @@ def test_info():
     EarthLocation._get_site_registry(force_builtin=True)
     greenwich = EarthLocation.of_site("greenwich")
     assert str(greenwich.info).startswith("name = Royal Observatory Greenwich")
+
+def test_get_itrs_geocentric_no_location():
+    # Define actual numeric values with appropriate units for geocentric coordinates
+    geocentric_x = 0 * u.m
+    geocentric_y = 0 * u.m
+    geocentric_z = 6378137 * u.m
+
+    # Create an EarthLocation object with the defined geocentric coordinates
+    location = EarthLocation(geocentric_x, geocentric_y, geocentric_z)
+
+    # Get the ITRS coordinates at a specific time without passing the location parameter
+    itrs = location.get_itrs(obstime=Time('2022-01-01T00:00:00'))
+
+    # Assert that the returned ITRS coordinates match the input geocentric coordinates
+    assert_allclose(itrs.x.value, geocentric_x.value)
+    assert_allclose(itrs.y.value, geocentric_y.value)
+    assert_allclose(itrs.z.value, geocentric_z.value)
+def test_get_itrs_invalid_location():
+    # Define actual numeric values with appropriate units for a valid EarthLocation
+    geocentric_x = 0 * u.m
+    geocentric_y = 0 * u.m
+    geocentric_z = 6378137 * u.m
+
+    # Create an EarthLocation object with the defined geocentric coordinates
+    valid_location = EarthLocation(geocentric_x, geocentric_y, geocentric_z)
+
+    # Attempt to get the ITRS coordinates with an invalid location and assert ValueError is raised
+    with raises(ValueError):
+        invalid_location = "Not a valid EarthLocation object"
+        valid_location.get_itrs(obstime=Time('2022-01-01T00:00:00'), location=invalid_location)

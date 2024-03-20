@@ -655,7 +655,7 @@ class EarthLocation(u.Quantity):
         """Convert to a tuple with X, Y, and Z as quantities."""
         return (self.x, self.y, self.z)
 
-    def get_itrs(self, obstime=None):
+    def get_itrs(self, obstime=None, location=None):
         """
         Generates an `~astropy.coordinates.ITRS` object with the location of
         this object at the requested ``obstime``.
@@ -665,11 +665,16 @@ class EarthLocation(u.Quantity):
         obstime : `~astropy.time.Time` or None
             The ``obstime`` to apply to the new `~astropy.coordinates.ITRS`, or
             if None, the default ``obstime`` will be used.
+        location : `~astropy.coordinates.EarthLocation` or None, optional
+            The reference location to calculate the topocentric position. If None,
+            the geocentric ITRS position is returned. If provided, the topocentric
+            ITRS position relative to the reference location is returned.
 
         Returns
         -------
         itrs : `~astropy.coordinates.ITRS`
-            The new object in the ITRS frame
+            The new object in the ITRS frame. If 'location' is provided, the returned
+            position is the topocentric ITRS position.
         """
         # Broadcast for a single position at multiple times, but don't attempt
         # to be more general here.
@@ -679,7 +684,18 @@ class EarthLocation(u.Quantity):
         # do this here to prevent a series of complicated circular imports
         from .builtin_frames import ITRS
 
-        return ITRS(x=self.x, y=self.y, z=self.z, obstime=obstime)
+        if location is None:
+            return ITRS(x=self.x, y=self.y, z=self.z, obstime=obstime)
+        else:
+            # First, create ITRS objects for self and the provided location
+            itrs_self = ITRS(x=self.x, y=self.y, z=self.z, obstime=obstime)
+            itrs_location = location.get_itrs(obstime=obstime)
+            # Calculate the vector difference to get the topocentric position
+            topocentric_dx = itrs_self.x - itrs_location.x
+            topocentric_dy = itrs_self.y - itrs_location.y
+            topocentric_dz = itrs_self.z - itrs_location.z
+            # Return a new ITRS object with the topocentric difference applied
+            return ITRS(x=topocentric_dx, y=topocentric_dy, z=topocentric_dz, obstime=obstime)
 
     itrs = property(
         get_itrs,
