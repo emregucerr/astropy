@@ -75,4 +75,4 @@ def write_latex(
 # ===================================================================
 # Register
 
-readwrite_registry.register_writer("latex", Cosmology, write_latex)
+readwrite_registry.register_writer("ascii.latex", Cosmology, write_latex)
