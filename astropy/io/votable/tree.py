@@ -2420,7 +2420,7 @@ class Table(Element, _IDProperty, _NameProperty, _UcdProperty, _DescriptionPrope
         warn_unknown_attrs("TABLE", extra.keys(), config, pos)
 
     def __repr__(self):
-        return repr(self.to_table())
+        return "<VOTable length={0}>".format(len(self.array))
 
     def __bytes__(self):
         return bytes(self.to_table())
