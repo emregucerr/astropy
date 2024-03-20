@@ -80,19 +80,13 @@ def _table_group_by(table, keys):
         table_keys = represent_mixins_as_columns(table_keys)
 
     # Get the argsort index `idx_sort`, accounting for particulars
-    try:
-        # take advantage of index internal sort if possible
-        if table_index is not None:
-            idx_sort = table_index.sorted_data()
-        else:
-            idx_sort = table_keys.argsort(kind="mergesort")
-        stable_sort = True
-    except TypeError:
-        # Some versions (likely 1.6 and earlier) of numpy don't support
-        # 'mergesort' for all data types.  MacOSX (Darwin) doesn't have a stable
-        # sort by default, nor does Windows, while Linux does (or appears to).
-        idx_sort = table_keys.argsort()
-        stable_sort = platform.system() not in ("Darwin", "Windows")
+    # take advantage of index internal sort if possible
+    if table_index is not None:
+        idx_sort = table_index.sorted_data()
+    else:
+        # Specify 'stable' which is explicitly guaranteed to be a stable sort
+        idx_sort = table_keys.argsort(kind='stable')
+    stable_sort = True
 
     # Finally do the actual sort of table_keys values
     table_keys = table_keys[idx_sort]
