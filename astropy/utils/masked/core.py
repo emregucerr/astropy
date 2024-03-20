@@ -687,15 +687,23 @@ class MaskedNDArray(Masked, np.ndarray, base_cls=np.ndarray, data_cls=np.ndarray
             np.logical_or(out, mask, out=out)
         return out
 
+    @staticmethod
+    def _all_none(iterable):
+        """Check if all elements in an iterable are `None`."""
+        return all(element is None for element in iterable)
+
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         out = kwargs.pop("out", None)
         out_unmasked = None
         out_mask = None
-        if out is not None:
+        all_out_masks_none = True
+        if out is not None and not all_out_masks_none and not self._all_none(masks):
+            raise TypeError("cannot write to unmasked output with masked inputs")
+        elif out is not None:
             out_unmasked, out_masks = self._get_data_and_masks(*out)
+            all_out_masks_none = self._all_none(out_masks)
             for d, m in zip(out_unmasked, out_masks):
                 if m is None:
-                    # TODO: allow writing to unmasked output if nothing is masked?
                     if d is not None:
                         raise TypeError("cannot write to unmasked output")
                 elif out_mask is None:
@@ -822,9 +830,23 @@ class MaskedNDArray(Masked, np.ndarray, base_cls=np.ndarray, data_cls=np.ndarray
                 "masked instances cannot yet deal with 'reduceat' or 'at'."
             )
 
-        if out_unmasked is not None:
-            kwargs["out"] = out_unmasked
-        result = getattr(ufunc, method)(*unmasked, **kwargs)
+        if ufunc is np.fix:
+            # Special handling for 'fix' ufunc with masked inputs.
+            # Remove 'where' from kwargs as it is not applicable for 'fix'.
+            kwargs.pop('where', None)
+            # Apply 'fix' only to unmasked inputs.
+            if out_unmasked is not None:
+                kwargs["out"] = out_unmasked
+            result = np.where(~mask, ufunc(unmasked, **kwargs), unmasked)
+        elif all_out_masks_none and self._all_none(masks):
+            # If all masks are None, inputs are unmasked, so we can use numpy directly.
+            if out_unmasked is not None:
+                kwargs["out"] = out_unmasked
+            result = getattr(np, method)(*unmasked, **kwargs)
+        else:
+            if out_unmasked is not None:
+                kwargs["out"] = out_unmasked
+            result = getattr(ufunc, method)(*unmasked, **kwargs)
 
         if result is None:  # pragma: no cover
             # This happens for the "at" method.
