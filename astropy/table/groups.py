@@ -2,6 +2,7 @@
 
 import platform
 import warnings
+from astropy.units import Quantity
 
 import numpy as np
 
@@ -425,3 +426,22 @@ class TableGroups(BaseGroups):
     @property
     def keys(self):
         return self._keys
+
+    def index_column(self, column_name):
+        """
+        Return the index of the column with the given name.
+
+        Parameters
+        ----------
+        column_name : str
+            The name of the column for which to find the index.
+
+        Returns
+        -------
+        index : int
+            The index of the column with the given name.
+        """
+        try:
+            return self.parent_table.colnames.index(column_name)
+        except ValueError:
+            raise ValueError(f"Column {column_name} does not exist in the table.")
